@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: "2019-11-29"  
+Resources:
+
+  ## Security group for WebInstance enabling port 80
+  ## from all IP addresses
+  WebSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Web server
+      GroupName: launch-wizard-1     
+      VpcId: vpc-043f6c7e 
+      SecurityGroupIngress:
+        -
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  ## EC2 Instance with a custom security group
+  ## and a larger root instance device
+  ## and an externally created EBS volume attached
+  WebInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      BlockDeviceMappings:
+        -
+          DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: 24
+            VolumeType: io1
+      InstanceType: t2.micro
+      ImageId: ami-0a29908e77d076918
+      KeyName: key2
+ Monitoring: true
+      SecurityGroupIds:
+        - !Ref WebSecurityGroup
+      SubnetId: subnet-48fbfb14
+      Tags:
+        -
+          Key: Name
+          Value: webserver
+      Volumes:
+        -
+          Device: "/dev/sdf"
+          VolumeId: !Ref LogVolume
+
+  ## EBS Volume for storing web logs
+  LogVolume:
+    Type: AWS::EC2::Volume
+    DeletionPolicy: Snapshot
+    Properties:
+      AvailabilityZone: us-east-2a
+      Size: 64
+      Tags:
+        -
+          Key: Name
+          Value: web-log-volume
+      VolumeType: gp2
+
+  ## Attach EIP to the instance
+  WebElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref WebInstance
+      Domain: vpc
